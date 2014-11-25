@@ -1,0 +1,283 @@
+package A3;
+
+import java.util.Hashtable;
+import java.util.Stack;
+import java.util.Vector;
+
+import A2.Parser;
+import A4.Gui;
+
+public class SemanticAnalyzer {
+	static Gui gui;
+	Stack<String> s=new Stack<String>();
+	private static int MINUS=0;
+	private static int MUL=0;
+	private static int DIV=0;
+	private static int PLUS=1;
+	private static int UMINUS=2;
+	private static int GT=3;
+	private static int LT=3;
+	private static int NEQ=4;
+	private static int EEQ=4;
+	private static int AND=5;
+	private static int OR=5;
+	private static int NOT=6;
+	private static int EQ=7;
+	private static int Int=0;
+	private static int Float=1;
+	private static int Char=2;
+	private static int STRING=3;
+	private static int Boolean=4;
+	private static int Void=5;
+	private static int err=6;
+	private static int OK=6;
+	private static int cube[][][]={{{ 0, 1,-1,-1,-1,-1,-1},
+									{ 1, 1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}, //MINUS MUL DIV
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}},
+									
+								   {{ 0, 1,-1, 3,-1,-1,-1},
+									{ 1, 1,-1, 3,-1,-1,-1},
+									{-1,-1,-1, 3,-1,-1,-1},
+									{ 3, 3, 3, 3, 3,-1,-1},// PLUS
+									{-1,-1,-1, 3,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}},
+									
+								   {{ 0, 1,-1,-1,-1,-1,-1}}, //U_MINUS 
+									
+								   {{ 4, 4,-1,-1,-1,-1,-1},
+									{ 4, 4,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}, 
+									{-1,-1,-1,-1,-1,-1,-1}, //LT GT
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}},
+									
+								   {{ 4, 4,-1,-1,-1,-1,-1},
+									{ 4, 4,-1,-1,-1,-1,-1},
+									{-1,-1, 4,-1,-1,-1,-1},
+									{-1,-1,-1, 4,-1,-1,-1}, //NEQ EEQ
+									{-1,-1,-1,-1, 4,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}},
+										
+								   
+								   {{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}, //AND OR
+									{-1,-1,-1,-1, 4,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1},
+									{-1,-1,-1,-1,-1,-1,-1}},
+									
+								   {{-1,-1,-1,-1, 4,-1,-1}}, //NOT
+									
+								   {{ 6,-1,-1,-1,-1,-1,-1},
+									{ 6, 6,-1,-1,-1,-1,-1},
+									{-1,-1, 6,-1,-1,-1,-1},
+									{-1,-1,-1, 6,-1,-1,-1}, //EQ
+									{-1,-1,-1,-1, 6,-1,-1},
+									{-1,-1,-1,-1,-1, 6,-1},
+									{-1,-1,-1,-1,-1,-1,-1}}};
+  
+  private static final Hashtable<String, Vector<SymbolTableItem>> symbolTable = new Hashtable<String, Vector<SymbolTableItem>>();
+  private static final Stack<String> stack = new Stack<String>();
+  
+  // create here a data structure for the cube of types
+  
+  public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable() {
+    return symbolTable;
+  }
+  
+  public static void checkVariable(String type, String id) {
+   
+   
+    // A. search the id in the symbol table
+
+    // B. if !exist then insert: type, scope=global, value={0, false, "", '')
+	if(!symbolTable.containsKey(id)){
+		System.out.println("Original");
+    Vector v = new Vector();
+    v.add(new SymbolTableItem(type,"global", ""));
+    symbolTable.put(id, v);
+	}
+	else
+	{
+		System.out.println("Duplicate");
+		
+		error(Parser.gui,1,id);
+	}
+	
+		
+    // C. else error: “variable id is already defined”
+  }
+
+  public static void pushStack(String type) {
+  
+    // push type in the stack
+	  System.out.println("Stack Before Pushing: "+stack);
+	 stack.push(type);
+	 System.out.println("current stack" +stack);
+	  
+	  
+  }
+  
+  public String popStack() {
+    String result="";
+    // pop a value from the stack
+    if(!stack.isEmpty())
+    result=stack.pop();
+    return result;
+  }
+  
+  
+  public String calculateCube(String type, String operator) {
+    String result="";
+    // unary operator ( - and !)
+    //System.out.println("type1: " +type);
+    int t=0,op=0;
+    
+    if(type.equals("ERROR"))
+    	t=err;
+    else if(type.equals("INTEGER") || type.equals("int") )
+    	t=Int;
+    else if(type.equalsIgnoreCase("FLOAT"))
+    	t=Float;
+    else if(type.equals("CHARACTER") || type.equals("char") )
+    	t=Char;
+    else if(type.equalsIgnoreCase("STRING"))
+    	t=STRING;
+    else if(type.equalsIgnoreCase("BOOLEAN"))
+    	t=Boolean;
+    else if(type.equalsIgnoreCase("VOID"))
+    	t=Void;
+    
+    //System.out.println("operator= "+operator);
+    if(operator.equals("-"))
+    	op=UMINUS;
+    else if(operator.equals("!"))
+    	op=NOT;
+    
+    //System.out.println("op= "+op+", t= "+t);
+    int res=cube[op][0][t];
+   
+    //System.out.println("res= "+res);
+    if(res==0)
+    	result="INTEGER";
+    else if(res==1)
+    	result="FLOAT";
+    else if(res==4)
+    	result="BOOLEAN";
+    else if(res==-1)
+    	result="ERROR";
+   
+    
+    return result;
+  }
+
+  public String calculateCube(String type1, String type2, String operator) {
+    String result="";
+    //System.out.println("type1: " +type1);
+    int t1=0,t2=0,op=0;
+    
+    if(type1.equals("ERROR"))
+    	t1=err;
+    else if(type1.equals("INTEGER") || type1.equals("int") )
+    	t1=Int;
+    else if(type1.equalsIgnoreCase("FLOAT"))
+    	t1=Float;
+    else if(type1.equals("CHARACTER") || type1.equals("char") )
+    	t1=Char;
+    else if(type1.equalsIgnoreCase("STRING"))
+    	t1=STRING;
+    else if(type1.equalsIgnoreCase("BOOLEAN"))
+    	t1=Boolean;
+    else if(type1.equalsIgnoreCase("VOID"))
+    	t1=Void;
+    
+   
+    if(type2.equals("ERROR"))
+    	t2=err;
+    else if(type2.equals("INTEGER") || type2.equals("int") )
+    	t2=Int;
+    else if(type2.equalsIgnoreCase("FLOAT"))
+    	t2=Float;
+    else if(type2.equals("CHARACTER") || type2.equals("char") )
+    	t2=Char;
+    else if(type2.equalsIgnoreCase("STRING"))
+    	t2=STRING;
+    else if(type2.equalsIgnoreCase("BOOLEAN"))
+    	t2=Boolean;
+    else if(type2.equalsIgnoreCase("VOID"))
+    	t2=Void;
+   	
+    	
+    //System.out.println("operator= "+operator);
+    if(operator.equals("+"))
+    	op=PLUS;
+    else if(operator.equals("-"))
+    	op=MINUS;
+    else if(operator.equals("*"))
+    	op=MUL;
+    else if(operator.equals("/"))
+    	op=DIV;
+    else if(operator.equals("="))
+    	op=EQ;
+    else if(operator.equals("<"))
+    	op=LT;
+    else if(operator.equals(">"))
+    	op=GT;
+    else if(operator.equals("&"))
+    	op=AND;
+    else if(operator.equals("|"))
+    	op=OR;
+    else if(operator.equals("=="))
+    	op=EEQ;
+    else if(operator.equals("!="))
+    	op=NEQ;
+  
+      // binary operator ( - and !)
+    //System.out.println("op= "+op+", t1= "+t1+", t2="+t2);
+    int res=cube[op][t1][t2];
+   
+    //System.out.println("res= "+res);
+    if(res==0)
+    	result="INTEGER";
+    else if(res==1)
+    	result="FLOAT";
+    else if(res==3)
+    	result="STRING";
+    else if(res==4)
+    	result="BOOLEAN";
+    else if(res==-1)
+    	result="ERROR";
+    else if(res==6)
+    	result="OK";
+    return result;
+  }
+  
+  public static void error(Gui gui, int err, String a) {
+	  int n= Parser.getLineNum();
+    switch (err) {
+      case 1: 
+        gui.writeConsole("Line" + n + ": variable <"+a+"> is already defined"); 
+        break;
+      case 2: 
+        gui.writeConsole("Line" + n + ": incompatible types: type mismatch"); 
+        break;
+      case 3: 
+        gui.writeConsole("Line" + n + ": incompatible types: expected boolean"); 
+        break;
+      case 4: 
+          gui.writeConsole("Line" + n + ": Variable <"+a+"> not defined"); 
+          break;
+
+
+    }
+  }
+  
+}

@@ -20,8 +20,8 @@ public class CodeGenerator {
     labels.add("#"+name + ", int, " + value);
   }
     
-  public static void addVariable(String type, String name) {
-    variables.add(name + ", " + type + ", global, null" );
+  public static void addVariable(String name, String type) {
+    variables.add(name + ", " + type + ", global, 0" );
   }
 
   public static void writeCode(Gui gui) {

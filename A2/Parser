@@ -25,21 +25,26 @@ public class Parser {
   public static int currentToken;
   public static int nflag=0;
   public static Gui gui;
+  public static int prgcounter=0;
 
-  public static int i=0,j=0,k=0;
+  public static int i=0,j=0,k=0,l=0,prg=0;
   public static DefaultMutableTreeNode run(Vector<Token> t, Gui gui) {
     Parser.gui=gui;
   tokens = t;
     currentToken = 0;
+    prgcounter=l=prg=0;
+    i=j=k=0;
     root = new DefaultMutableTreeNode("PROGRAM");
     System.out.println("called");
     CodeGenerator.clear(gui);
     //
     rule_program(root);
     CodeGenerator.addInstruction("OPR", "0", "0");
+    prgcounter++;
     gui.writeSymbolTable(SemanticAnalyzer.getSymbolTable());
     CodeGenerator.writeCode(gui);
     SemanticAnalyzer.getSymbolTable().clear();
+    System.out.println("lines= "+prgcounter);
     return root;
   }
   
@@ -261,6 +266,7 @@ public class Parser {
 		{System.out.println("types dont match");SemanticAnalyzer.error(gui, 2,"");}
   
 	CodeGenerator.addInstruction("STO", a, "0");
+	prgcounter++;
   return error1;
  
   }
@@ -314,7 +320,8 @@ return error1;
   node= new DefaultMutableTreeNode(s);
   parent.add(node);
   currentToken++;
-  int line=tokens.get(currentToken).getLine();
+  int line=prgcounter;
+  System.out.println("at exp: "+line);
   if(tokens.get(currentToken).getWord().equals("(")){
   node= new DefaultMutableTreeNode("(");
   parent.add(node);
@@ -351,18 +358,30 @@ return error1;
   }
   
   CodeGenerator.addInstruction("JMC", "#e"+i, "false" );
-     
+     prgcounter++;
+     i++;
+     int temp=prgcounter;
+     System.out.println("i="+i);
  
   node= new DefaultMutableTreeNode("PROGRAM");
   parent.add(node);
-  error1=rule_program(node);
   
-  n= tokens.get(currentToken).getLine();
-  CodeGenerator.addLabel("e"+i, n);
+  error1=rule_program(node);
+  l++;
+  
+  CodeGenerator.addInstruction("JMP", "#e"+(i), "0" );
+  prgcounter++;
+  //int temp1=prgcounter;
+  CodeGenerator.addLabel("e"+(i-l),prgcounter+1);
+  
+  //l--;
+  System.out.println("i-l: "+(i-l-1));
+  System.out.println("position to jump if false: "+(prgcounter+1));
+  //i++;
+  System.out.println("prg counter for loop again "+(line+1));
+  CodeGenerator.addLabel("e"+(i), line+1);
   i++;
-  CodeGenerator.addLabel("e"+i, line);
-  CodeGenerator.addInstruction("JMP", "#e"+i, "0" );
-  i++;
+  l++;
 return error1;
   }
 
@@ -376,7 +395,7 @@ return error1;
   node= new DefaultMutableTreeNode(s);
   parent.add(node);
   currentToken++;
-    
+    int line=prgcounter;
   if(tokens.get(currentToken).getWord().equals("(")){
   node= new DefaultMutableTreeNode("(");
   parent.add(node);
@@ -388,6 +407,7 @@ return error1;
   while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("!") ||tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getWord().equals("-") || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equalsIgnoreCase("true") || tokens.get(currentToken).getWord().equalsIgnoreCase("false") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") ) )
   currentToken++;
   }
+  
   node= new DefaultMutableTreeNode("EXPRESSION");
   parent.add(node);
   error1=rule_expression(node);
@@ -410,29 +430,36 @@ return error1;
   }
   
   CodeGenerator.addInstruction("JMC", "#f"+j, "false" );
-     
+  prgcounter++;
+  
   node= new DefaultMutableTreeNode("PROGRAM");
   parent.add(node);
   error1=rule_program(node);
+  prg++;
+  CodeGenerator.addLabel("f"+j, prgcounter+1);
+  j++;
   
   if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("else")){
   s=tokens.get(currentToken).getWord();
   node= new DefaultMutableTreeNode(s);
   parent.add(node);
   currentToken++;
-  int line=tokens.get(currentToken).getLine();
-  CodeGenerator.addLabel("f"+j, line);
-  j++;
+    
   CodeGenerator.addInstruction("JMP", "#f"+j, "0");
+  prgcounter++;
+  
   node= new DefaultMutableTreeNode("PROGRAM");
   parent.add(node);
   error1=rule_program(node);
-  CodeGenerator.addLabel("f"+j, tokens.get(currentToken).getLine());
+  prg++;
+  CodeGenerator.addLabel("f"+j, prgcounter+1);
+  
   j++;
    
    
   }
   
+  prg++;
  return error1;
   }
   
@@ -475,6 +502,7 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
   else
   error(7);
   CodeGenerator.addInstruction("OPR", "21", "0");
+  prgcounter++;
  
   return error1;
  
@@ -657,6 +685,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
         	String res= sa.calculateCube(x, y, operator);
         	SemanticAnalyzer.pushStack(res);
         	CodeGenerator.addInstruction("OPR", "8", "0");
+        	prgcounter++;
         	flag=1;
         	
         }
@@ -694,6 +723,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
         	String res= sa.calculateCube(x, y, operator);
         	SemanticAnalyzer.pushStack(res);
         	CodeGenerator.addInstruction("OPR", "9", "0");
+        	prgcounter++;
         	flag=1;
         	
         }
@@ -723,6 +753,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     String y= sa.calculateCube(x, "!");
     SemanticAnalyzer.pushStack(y);
     CodeGenerator.addInstruction("OPR", "10", "0");
+    prgcounter++;
     }
     return error1; 
   }
@@ -790,6 +821,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
       	String res= sa.calculateCube(x, y, operator);
       	SemanticAnalyzer.pushStack(res);
       	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
       	flag=1;
       	
       }
@@ -839,6 +871,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
       	String res= sa.calculateCube(x, y, operator);
       	SemanticAnalyzer.pushStack(res);
       	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
       	flag=1;
       	
       }
@@ -886,6 +919,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
       	String res= sa.calculateCube(x, y, operator);
       	SemanticAnalyzer.pushStack(res);
       	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
       	flag=1;
       	
       }
@@ -901,6 +935,8 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("-")) {
       node = new DefaultMutableTreeNode("-");
       parent.add(node);
+      CodeGenerator.addInstruction("LIT","0", "0");
+      prgcounter++;
       currentToken++;
       flag=1;
     }
@@ -913,6 +949,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     String y= sa.calculateCube(x, "-");
     SemanticAnalyzer.pushStack(y);
   	CodeGenerator.addInstruction("OPR","3", "0");
+  	prgcounter++;
     
     }
     
@@ -929,6 +966,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
       parent.add(node);
       SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
       CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+      prgcounter++;
       currentToken++;
     } 
     
@@ -937,6 +975,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("INTEGER");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     } 
     
@@ -945,6 +984,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -953,6 +993,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -961,6 +1002,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("INTEGER");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -969,6 +1011,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("BOOLEAN");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -977,6 +1020,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("BOOLEAN");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -985,6 +1029,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("INTEGER");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -993,6 +1038,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
     parent.add(node);
     SemanticAnalyzer.pushStack("INTEGER");
     CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
     currentToken++;
     }
     
@@ -1019,6 +1065,7 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
 			}
 	
 		  CodeGenerator.addInstruction("LOD", tokens.get(currentToken).getWord(), "0");
+		  prgcounter++;
      currentToken++;
     }
     

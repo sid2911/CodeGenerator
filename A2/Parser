@@ -28,6 +28,7 @@ public class Parser {
   public static int prgcounter=0;
 
   public static int i=0,j=0,k=0,l=0,prg=0;
+  public static String s=null;
   public static DefaultMutableTreeNode run(Vector<Token> t, Gui gui) {
     Parser.gui=gui;
   tokens = t;
@@ -431,14 +432,17 @@ return error1;
   
   CodeGenerator.addInstruction("JMC", "#f"+j, "false" );
   prgcounter++;
-  
+  j++;
+  int flag=0;
   node= new DefaultMutableTreeNode("PROGRAM");
   parent.add(node);
   error1=rule_program(node);
+  System.out.println("prg ends at: "+prgcounter);
   prg++;
-  CodeGenerator.addLabel("f"+j, prgcounter+1);
-  j++;
   
+  int temp=prgcounter,temp1=j;
+ 
+  //j++;
   if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("else")){
   s=tokens.get(currentToken).getWord();
   node= new DefaultMutableTreeNode(s);
@@ -455,11 +459,16 @@ return error1;
   CodeGenerator.addLabel("f"+j, prgcounter+1);
   
   j++;
-   
+   flag=1;
    
   }
-  
-  prg++;
+
+  if(flag==1)
+  CodeGenerator.addLabel("f"+(temp1-prg), temp+2);
+  else 
+	  CodeGenerator.addLabel("f"+(temp1-prg), temp+1);
+	flag=0; 
+  prg--;
  return error1;
   }
   
@@ -513,8 +522,8 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 	  SemanticAnalyzer sa=new SemanticAnalyzer(); 
 	  boolean error1= false;
 	  DefaultMutableTreeNode node= null;
-	  String s= tokens.get(currentToken).getWord();
-	  node= new DefaultMutableTreeNode(s);
+	  String s1= tokens.get(currentToken).getWord();
+	  node= new DefaultMutableTreeNode(s1);
 	  parent.add(node);
 	  currentToken++;
 	  
@@ -527,14 +536,15 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 	  else
 	  {
 	  error(8);
-	  while(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER")  || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") ) )
+	  while(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER")  || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL")  || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals(")") ) )
 	  currentToken++;
 	  }
 	  
 	  if(tokens.get(currentToken).getToken().equals("IDENTIFIER")){
 		    node= new DefaultMutableTreeNode("IDENTIFIER ("+tokens.get(currentToken).getWord()+")");
 		  parent.add(node);
-		  CodeGenerator.addInstruction("LOD", tokens.get(currentToken).getWord(), "0");
+		  s=tokens.get(currentToken).getWord();
+		  
 		  currentToken++;
 		  
 		  }
@@ -608,13 +618,18 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 	  
 	  DefaultMutableTreeNode node=null;
 	  int line=0;
-	  String str=null;
+	  String str=null,str1=null;
 	  	  
 	  if(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("CHARACTER"))){
 		  str= "case"+tokens.get(currentToken).getWord();
+		  CodeGenerator.addInstruction("LOD", s, "0");
+		  prgcounter++;
 		  CodeGenerator.addInstruction("LIT", tokens.get(currentToken).getWord(), "0");
-		  CodeGenerator.addInstruction("OPR", "14", "0");
+		  prgcounter++;
+		  CodeGenerator.addInstruction("OPR", "15", "0");
+		  prgcounter++;
 		  CodeGenerator.addInstruction("JMC", "#s"+k, "false");
+		  prgcounter++;
 		  //parent.add(node);
 		  currentToken++;
 		    
@@ -637,8 +652,8 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 		  
 	  
 	  rule_program(node);
-	  line=tokens.get(currentToken).getLine();
-	  CodeGenerator.addLabel("s"+k, line);
+	  
+	  CodeGenerator.addLabel("s"+k, prgcounter+1);
 	  k++;
 	  
 	  

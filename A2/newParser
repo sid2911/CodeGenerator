@@ -1,0 +1,1187 @@
+package A2;
+
+import java.util.Hashtable;
+import java.util.Stack;
+import java.util.Vector;
+
+import A4.CodeGenerator;
+import A4.Gui;
+import A4.Lexer;
+import A4.Token;
+
+
+
+import javax.swing.tree.DefaultMutableTreeNode;
+
+import A3.SemanticAnalyzer;
+import A3.SymbolTableItem;
+
+/**
+ *
+ * @author javiergs
+ */
+public class Parser {
+
+  public static DefaultMutableTreeNode root;
+  public static Hashtable<Integer, Integer> hash;
+  public static Stack<Integer> stack,stack1,stack2;
+  public static Vector<Token> tokens;
+  public static int currentToken;
+  public static int nflag=0;
+  public static Gui gui;
+  public static int prgcounter=0;
+
+  public static int i=0,j=0,k=0,l=0,prg=0;
+  public static String s=null;
+  public static DefaultMutableTreeNode run(Vector<Token> t, Gui gui) {
+    Parser.gui=gui;
+  tokens = t;
+    currentToken = 0;
+    prgcounter=l=prg=0;
+    i=j=k=0;
+    hash=new Hashtable<Integer,Integer>();
+    stack=new Stack<Integer>();
+    stack1=new Stack<Integer>();
+    stack2=new Stack<Integer>();
+    root = new DefaultMutableTreeNode("PROGRAM");
+    System.out.println("called");
+    CodeGenerator.clear(gui);
+    //
+    rule_program(root);
+    
+    System.out.println(stack2);
+    System.out.println(stack);
+    System.out.println(stack1);System.out.println(stack.size());
+    for(int count=0;count<stack.size();count++){
+    	if(!stack.isEmpty() && !stack1.isEmpty())
+    	CodeGenerator.addLabel("f"+stack.pop(), stack1.pop());
+    	
+    }
+    CodeGenerator.addLabel("f"+stack.pop(), stack1.pop());
+    CodeGenerator.addLabel("f"+stack.pop(), stack1.pop());
+    CodeGenerator.addInstruction("OPR", "0", "0");
+    prgcounter++;
+    gui.writeSymbolTable(SemanticAnalyzer.getSymbolTable());
+    CodeGenerator.writeCode(gui);
+    SemanticAnalyzer.getSymbolTable().clear();
+    System.out.println("lines= "+prgcounter);
+    
+   // System.out.println(stack);
+    
+    return root;
+  }
+  
+ 
+  
+  private static boolean rule_program(DefaultMutableTreeNode parent)
+  {
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;;
+  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("{"))
+  {
+  node= new DefaultMutableTreeNode("{");
+  parent.add(node);
+  currentToken++;
+  }
+ 
+  else
+  {
+  error(1);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("print") ||tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals("while") || tokens.get(currentToken).getWord().equals("if") || tokens.get(currentToken).getWord().equals("return") || tokens.get(currentToken).getWord().equals("int") || tokens.get(currentToken).getWord().equals("float") || tokens.get(currentToken).getWord().equals("char") || tokens.get(currentToken).getWord().equals("string") || tokens.get(currentToken).getWord().equals("void") || tokens.get(currentToken).getWord().equals("boolean") || tokens.get(currentToken).getWord().equals("}") ) )
+  currentToken++;
+ 
+  }
+ 
+  node= new DefaultMutableTreeNode("BODY");
+  parent.add(node);
+  //currentToken++;
+ 
+  error1= rule_body(node);
+ 
+ 
+   
+  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("}"))
+  {
+  //System.out.println("hello");
+  node= new DefaultMutableTreeNode("}");
+  parent.add(node);
+  currentToken++;
+ 
+  }
+  else
+  { 
+	  currentToken--;
+	  error(2);
+	  currentToken++;
+  }
+  
+  return error1;
+  }
+  
+  private static boolean rule_body(DefaultMutableTreeNode parent)
+  {
+  Boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}"))
+  {//t++;System.out.println("t= "+t );
+  if(currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("IDENTIFIER"))
+  {
+  node= new DefaultMutableTreeNode("ASSIGNMENT");
+  parent.add(node);
+  error1= rule_ASSIGNMENT(node);
+  if(tokens.get(currentToken).getWord().equals(";"))
+  {
+  node= new DefaultMutableTreeNode(";");
+  parent.add(node);
+  currentToken++;}
+  else
+  {  error(3); }
+  }
+  else if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("print"))
+  {
+ 
+  node= new DefaultMutableTreeNode("PRINT");
+  parent.add(node);
+  error1= rule_PRINT(node);
+  //System.out.println("called");
+  if(tokens.get(currentToken).getWord().equals(";"))
+  {
+  node= new DefaultMutableTreeNode(";");
+  parent.add(node);
+  currentToken++;}
+  else
+  {  error(3); }
+  }
+  else if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("return"))
+  {
+ 
+  node= new DefaultMutableTreeNode("RETURN");
+  parent.add(node);
+  error1= rule_RETURN(node);
+  if(tokens.get(currentToken).getWord().equals(";"))
+  {
+  node= new DefaultMutableTreeNode(";");
+  parent.add(node);
+  currentToken++;}
+  else
+  {  error(3);;}
+  //System.out.println("called");
+ 
+  }
+  else if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("while"))
+  {
+ 
+  node= new DefaultMutableTreeNode("WHILE");
+  parent.add(node);
+  error1= rule_WHILE(node);
+  //System.out.println("called");
+ 
+  }
+  else if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("switch"))
+  {
+	  System.out.println("calling");
+ 
+  node= new DefaultMutableTreeNode("SWITCH");
+  parent.add(node);
+  rule_SWITCH(node);
+  System.out.println("called");
+ 
+  }
+  else if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("if"))
+  {
+ 
+  node= new DefaultMutableTreeNode("IF");
+  parent.add(node);
+  error1= rule_IF(node);
+  //System.out.println("called");
+ 
+  }
+  else if(currentToken < tokens.size() && (tokens.get(currentToken).getWord().equals("int") || tokens.get(currentToken).getWord().equals("float") || tokens.get(currentToken).getWord().equals("char") || tokens.get(currentToken).getWord().equals("string") || tokens.get(currentToken).getWord().equals("boolean") || tokens.get(currentToken).getWord().equals("void")))
+  {
+ 
+  node= new DefaultMutableTreeNode("VARIABLE DECLARATION");
+  parent.add(node);
+  //currentToken++;
+  error1= rule_VARIABLE(node);
+  //System.out.println("called");
+  if(tokens.get(currentToken).getWord().equals(";"))
+  {
+  node= new DefaultMutableTreeNode(";");
+  parent.add(node);
+  currentToken++;}
+  else
+  {  error(3);}
+  }
+  else
+  { System.out.println("Token= "+tokens.get(currentToken).getWord());
+	  error(4);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("print") ||tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals("while") || tokens.get(currentToken).getWord().equals("if") || tokens.get(currentToken).getWord().equals("return") || tokens.get(currentToken).getWord().equals("int") || tokens.get(currentToken).getWord().equals("float") || tokens.get(currentToken).getWord().equals("char") || tokens.get(currentToken).getWord().equals("string") || tokens.get(currentToken).getWord().equals("void") || tokens.get(currentToken).getWord().equals("boolean") || tokens.get(currentToken).getWord().equals("}") ) )
+  currentToken++;
+   
+  }
+ 
+}
+ 
+ 
+  return error1;
+ 
+  }
+  
+  private static boolean rule_ASSIGNMENT(DefaultMutableTreeNode parent)
+  {
+	  SemanticAnalyzer sa=new SemanticAnalyzer();
+	  int flag=0;
+  boolean error1= false; int n=0;
+  DefaultMutableTreeNode node;
+  node= new DefaultMutableTreeNode("IDENTIFIER("+tokens.get(currentToken).getWord()+")");
+  parent.add(node);
+  String a=tokens.get(currentToken).getWord();
+ // SemanticAnalyzer.pushStack();
+  //SemanticAnalyzer.getSymbolTable().get(a).firstElement().getType();
+  if(!SemanticAnalyzer.getSymbolTable().isEmpty()){
+	  if(SemanticAnalyzer.getSymbolTable().containsKey(a)){
+	  SemanticAnalyzer.pushStack(SemanticAnalyzer.getSymbolTable().get(a).firstElement().getType());
+	  //flag=1;
+	  }
+	  else
+		  {
+		  System.out.println("Variable "+a+" not defined");
+		  SemanticAnalyzer.pushStack("ERROR");
+		  SemanticAnalyzer.error(gui, 4,a);}
+  }
+  
+  else
+	  {
+	  	System.out.println("Variable not defined, Accessing empty symboltable");
+	  	SemanticAnalyzer.pushStack("ERROR");
+	  	SemanticAnalyzer.error(gui, 4,a);
+	  }
+  n = tokens.get(currentToken).getLine();
+  currentToken++;
+  
+  if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("=")){
+  node= new DefaultMutableTreeNode("=");
+  parent.add(node);
+  currentToken++;
+  }
+  else
+  { error(5);
+   
+  while(currentToken < tokens.size() && n>=tokens.get(currentToken).getLine() && !(tokens.get(currentToken).getWord().equals("!") ||tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getWord().equals("-") || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equalsIgnoreCase("true") || tokens.get(currentToken).getWord().equalsIgnoreCase("false") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") || tokens.get(currentToken).getWord().equals(";") ) )
+  currentToken++;
+  }
+ 
+  if(n>=tokens.get(currentToken).getLine() )
+  {  node = new DefaultMutableTreeNode("EXPRESSION");
+      parent.add(node);
+      error1 = rule_expression(node);
+  }   
+  
+  String x= sa.popStack();
+  System.out.println("X= "+x);
+	String y= sa.popStack();
+	System.out.println("Y= "+y);
+	String opr="=";
+	String res= sa.calculateCube(y, x,opr);
+	if(res.equals("OK"))
+		System.out.println("types match");
+	else
+		{System.out.println("types dont match");SemanticAnalyzer.error(gui, 2,"");}
+  
+	CodeGenerator.addInstruction("STO", a, "0");
+	prgcounter++;
+  return error1;
+ 
+  }
+  
+  private static boolean rule_VARIABLE(DefaultMutableTreeNode parent)
+  {
+ 
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  String id=null,type=null,s= tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+  if(tokens.get(currentToken).getToken().equals("IDENTIFIER")){
+	 id= tokens.get(currentToken).getWord();
+    node= new DefaultMutableTreeNode("IDENTIFIER ("+tokens.get(currentToken).getWord()+")");
+  parent.add(node);
+  SemanticAnalyzer.checkVariable(tokens.get(currentToken-1).getWord(), tokens.get(currentToken).getWord());
+  currentToken++;
+  
+  }
+  else
+  {
+	  error(6);
+	  
+  }
+  CodeGenerator.addVariable(id, s);
+return error1;
+  }
+  
+  private static boolean rule_RETURN(DefaultMutableTreeNode parent)
+  {
+	 
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  String s= tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+  CodeGenerator.addInstruction("OPR", "1", "0");
+return error1;
+  }
+
+  private static boolean rule_WHILE(DefaultMutableTreeNode parent)
+  {
+	  int n=0;
+  SemanticAnalyzer sa=new SemanticAnalyzer(); 
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  String s= tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+  int line=prgcounter;
+  System.out.println("at exp: "+line);
+  if(tokens.get(currentToken).getWord().equals("(")){
+  node= new DefaultMutableTreeNode("(");
+  parent.add(node);
+  currentToken++;
+  }
+  
+  else
+  {
+  error(8);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("!") ||tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getWord().equals("-") || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equalsIgnoreCase("true") || tokens.get(currentToken).getWord().equalsIgnoreCase("false") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") ) )
+  currentToken++;
+  }
+  
+  node= new DefaultMutableTreeNode("EXPRESSION");
+  parent.add(node);
+  error1=rule_expression(node);
+  
+  String x=sa.popStack();
+  if(!x.equals("BOOLEAN"))
+	  SemanticAnalyzer.error(gui, 3,"");;
+  
+  
+  if(tokens.get(currentToken).getWord().equals(")")){
+  node= new DefaultMutableTreeNode(")");
+  parent.add(node);
+  currentToken++;
+  }
+  
+  else
+  {
+  error(7);
+  	while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("{")))
+  		currentToken++;
+  }
+  
+  CodeGenerator.addInstruction("JMC", "#e"+i, "false" );
+     prgcounter++;
+     i++;
+     int temp=prgcounter;
+     System.out.println("i="+i);
+ 
+  node= new DefaultMutableTreeNode("PROGRAM");
+  parent.add(node);
+  
+  error1=rule_program(node);
+  l++;
+  
+  CodeGenerator.addInstruction("JMP", "#e"+(i), "0" );
+  prgcounter++;
+  //int temp1=prgcounter;
+  CodeGenerator.addLabel("e"+(i-l),prgcounter+1);
+  
+  //l--;
+  System.out.println("i-l: "+(i-l-1));
+  System.out.println("position to jump if false: "+(prgcounter+1));
+  //i++;
+  System.out.println("prg counter for loop again "+(line+1));
+  CodeGenerator.addLabel("e"+(i), line+1);
+  i++;
+  l++;
+return error1;
+  }
+
+  private static boolean rule_IF(DefaultMutableTreeNode parent)
+  {
+	  
+  SemanticAnalyzer sa=new SemanticAnalyzer();
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  String s= tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+    int line=prgcounter;
+  if(tokens.get(currentToken).getWord().equals("(")){
+  node= new DefaultMutableTreeNode("(");
+  parent.add(node);
+  currentToken++;
+  }
+  else
+  {
+  error(8);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("!") ||tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getWord().equals("-") || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equalsIgnoreCase("true") || tokens.get(currentToken).getWord().equalsIgnoreCase("false") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") ) )
+  currentToken++;
+  }
+  
+  node= new DefaultMutableTreeNode("EXPRESSION");
+  parent.add(node);
+  error1=rule_expression(node);
+  
+  String x=sa.popStack();
+  if(!x.equals("BOOLEAN"))
+	  SemanticAnalyzer.error(gui, 3,"");;
+  
+  
+  if(tokens.get(currentToken).getWord().equals(")")){
+  node= new DefaultMutableTreeNode(")");
+  parent.add(node);
+  currentToken++;
+  }
+  else
+  {
+  error(7);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("{") || tokens.get(currentToken).getWord().equals("else") ))
+  currentToken++;
+  }
+  
+  CodeGenerator.addInstruction("JMC", "#f"+j, "false" );
+    prgcounter++;stack2.push(j);System.out.println(stack2);
+  j++;
+  int flag=0;
+  node= new DefaultMutableTreeNode("PROGRAM");
+  parent.add(node);
+  error1=rule_program(node);
+  System.out.println("prg ends at: "+prgcounter);
+  prg++;
+  int temp=prgcounter,temp1=j;System.out.println("putting if");
+  System.out.println("j= "+j+", times="+prg);
+  stack.push(stack2.pop());
+  
+  
+  //j++;
+ 
+  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("else")){
+  s=tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+    
+  CodeGenerator.addInstruction("JMP", "#f"+j, "0");
+  //hash.put(j, prgcounter+1);
+  prgcounter++;stack.push(j);
+  j++;
+  node= new DefaultMutableTreeNode("PROGRAM");
+  parent.add(node);
+  error1=rule_program(node);
+  prg++;
+  //stack.push(prgcounter+1);
+  System.out.println("putting else");
+  System.out.println("j= "+j+", times="+prg);stack1.push(prgcounter+1);
+  //CodeGenerator.addLabel("f"+j, prgcounter+1);
+  
+  //j++;
+   flag=1;
+   
+  }
+ 
+  if(flag==1)
+	  stack1.push(temp+2);
+  else 
+	  stack1.push(temp+1);
+	flag=0; 
+  //prg++;
+ return error1;
+  }
+  
+private static boolean rule_PRINT(DefaultMutableTreeNode parent)
+  {
+ 
+  boolean error1= false;
+  DefaultMutableTreeNode node= null;
+  String s=tokens.get(currentToken).getWord();
+  node= new DefaultMutableTreeNode(s);
+  parent.add(node);
+  currentToken++;
+  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+  {
+  node= new DefaultMutableTreeNode("(");
+  parent.add(node);
+  currentToken++;
+  }
+  else
+  {
+  error(8);
+  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("!") ||tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getWord().equals("-") || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("STRING") || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equalsIgnoreCase("true") || tokens.get(currentToken).getWord().equalsIgnoreCase("false") || tokens.get(currentToken).getWord().equals("(") || tokens.get(currentToken).getWord().equals(")") ) )
+  currentToken++;
+  }
+ 
+  node= new DefaultMutableTreeNode("EXPRESSION");
+  parent.add(node);
+  //currentToken++;
+  error1= rule_expression(node);
+  //System.out.println("hey");
+  //currentToken++;
+  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(")"))
+  {
+//  System.out.println("hello1");
+  node= new DefaultMutableTreeNode(")");
+  parent.add(node);
+  currentToken++;
+ 
+  }
+  else
+  error(7);
+  CodeGenerator.addInstruction("OPR", "21", "0");
+  prgcounter++;
+ 
+  return error1;
+ 
+  }
+  
+  private static void rule_SWITCH(DefaultMutableTreeNode parent){
+	
+	  SemanticAnalyzer sa=new SemanticAnalyzer(); 
+	  boolean error1= false;
+	  DefaultMutableTreeNode node= null;
+	  String s1= tokens.get(currentToken).getWord();
+	  node= new DefaultMutableTreeNode(s1);
+	  parent.add(node);
+	  currentToken++;
+	  
+	  if(tokens.get(currentToken).getWord().equals("(")){
+	  node= new DefaultMutableTreeNode("(");
+	  parent.add(node);
+	  currentToken++;
+	  }
+	  
+	  else
+	  {
+	  error(8);
+	  while(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER")  || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL")  || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals(")") ) )
+	  currentToken++;
+	  }
+	  
+	  if(tokens.get(currentToken).getToken().equals("IDENTIFIER")){
+		    node= new DefaultMutableTreeNode("IDENTIFIER ("+tokens.get(currentToken).getWord()+")");
+		  parent.add(node);
+		  s=tokens.get(currentToken).getWord();
+		  
+		  currentToken++;
+		  
+		  }
+		  else
+		  {
+			  error(6);
+			  
+		  }
+	  
+	  if(tokens.get(currentToken).getWord().equals(")")){
+		  node= new DefaultMutableTreeNode(")");
+		  parent.add(node);
+		  currentToken++;
+		  }
+		  else
+		  {
+		  error(7);
+		  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("{") ))
+		  currentToken++;
+		  }
+	  
+	  if(tokens.get(currentToken).getWord().equals("{")){
+		  node= new DefaultMutableTreeNode("{");
+		  parent.add(node);
+		  currentToken++;
+		  }
+		  else
+		  {
+		  error(1);
+		  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals("case") ))
+		  currentToken++;
+		  }
+	  
+	  do{
+		  node= new DefaultMutableTreeNode("case");
+		  parent.add(node);
+		  currentToken++;
+		  rule_CASES(node);
+		  
+	  }while(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("case"));
+	 
+	  
+	  
+	  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("default")){
+		
+		  node= new DefaultMutableTreeNode("default");
+		  parent.add(node);
+		  currentToken++;
+		  rule_DEFAULT(node);
+	  }
+		
+	  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("}")){
+		  node= new DefaultMutableTreeNode("}");
+		  parent.add(node);
+		  currentToken++;
+		  }
+		  else
+		  {
+		  error(2);
+		  }
+	  
+	  
+	  
+	  
+	  
+  }
+  
+  
+  private static void rule_CASES(DefaultMutableTreeNode parent){
+	  
+	  
+	  DefaultMutableTreeNode node=null;
+	  int line=0;
+	  String str=null,str1=null;
+	  	  
+	  if(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("CHARACTER"))){
+		  str= "case"+tokens.get(currentToken).getWord();
+		  CodeGenerator.addInstruction("LOD", s, "0");
+		  prgcounter++;
+		  CodeGenerator.addInstruction("LIT", tokens.get(currentToken).getWord(), "0");
+		  prgcounter++;
+		  CodeGenerator.addInstruction("OPR", "15", "0");
+		  prgcounter++;
+		  CodeGenerator.addInstruction("JMC", "#s"+k, "false");
+		  prgcounter++;
+		  //parent.add(node);
+		  currentToken++;
+		    
+		  
+	  }
+	  else
+		  error(11);
+	  
+	  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(":")){	  
+	  node= new DefaultMutableTreeNode(str+tokens.get(currentToken).getWord());
+	  parent.add(node);
+	  currentToken++;
+	  }
+	  else{
+		  error(12);
+		  while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("{"))
+			  currentToken++;
+		  
+	  }
+		  
+	  
+	  rule_program(node);
+	  
+	  CodeGenerator.addLabel("s"+k, prgcounter+1);
+	  k++;
+	  
+	  
+  }
+  
+
+  private static void rule_DEFAULT(DefaultMutableTreeNode parent){
+	 
+	  DefaultMutableTreeNode node= new DefaultMutableTreeNode("default"+tokens.get(currentToken).getWord());
+	  parent.add(node);
+	  currentToken++;
+	  
+	  rule_program(node);
+	  
+  }
+  
+  
+  
+private static boolean rule_expression(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    String operator=null;
+    DefaultMutableTreeNode node;
+    node = new DefaultMutableTreeNode("X");
+    parent.add(node);
+    error1 = rule_X(node);
+    int flag=1;
+    while (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("|")){ 
+   
+        node = new DefaultMutableTreeNode("|");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("X");
+        parent.add(node);
+        error1 = rule_X(node);
+        flag++;
+        operator="|";
+
+        if(flag==2)
+        {
+        	String x= sa.popStack();
+        	String y= sa.popStack();
+        	
+        	String res= sa.calculateCube(x, y, operator);
+        	SemanticAnalyzer.pushStack(res);
+        	CodeGenerator.addInstruction("OPR", "8", "0");
+        	prgcounter++;
+        	flag=1;
+        	
+        }
+   
+
+    }
+    return error1;
+  }
+
+  private static boolean rule_X(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    String operator=null;
+    DefaultMutableTreeNode node;
+    node = new DefaultMutableTreeNode("Y");
+    parent.add(node);
+    error1 = rule_Y(node);
+    int flag=1;
+    while (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("&")){ 
+   
+        node = new DefaultMutableTreeNode("&");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("Y");
+        parent.add(node);
+        error1 = rule_Y(node);
+        flag++;
+        operator="&";
+
+        if(flag==2)
+        {
+        	String x= sa.popStack();
+        	String y= sa.popStack();
+        	
+        	String res= sa.calculateCube(x, y, operator);
+        	SemanticAnalyzer.pushStack(res);
+        	CodeGenerator.addInstruction("OPR", "9", "0");
+        	prgcounter++;
+        	flag=1;
+        	
+        }
+
+       
+    }
+    return error1;
+  }
+
+  private static boolean rule_Y(DefaultMutableTreeNode parent) {
+    boolean error1;
+    int flag=0;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    DefaultMutableTreeNode node;
+    if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("!")) {
+      node = new DefaultMutableTreeNode("!");
+      parent.add(node);
+      currentToken++;
+      flag=1;
+    }
+    node = new DefaultMutableTreeNode("R");
+    parent.add(node);
+    error1 = rule_R(node);
+   
+    if(flag==1){
+    String x= sa.popStack();
+    String y= sa.calculateCube(x, "!");
+    SemanticAnalyzer.pushStack(y);
+    CodeGenerator.addInstruction("OPR", "10", "0");
+    prgcounter++;
+    }
+    return error1; 
+  }
+  
+  private static boolean rule_R(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    String operator=null;
+    String opr=null;
+    DefaultMutableTreeNode node;
+    node = new DefaultMutableTreeNode("E");
+    parent.add(node);
+    error1 = rule_E(node);
+    int flag=1;
+    while (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(">") || currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("<") || currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("==") || currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("!=")) {
+      if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(">")) {
+        node = new DefaultMutableTreeNode(">");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("E");
+        parent.add(node);
+        error1 = rule_E(node);
+        flag++;
+        operator=">";
+        opr="11";
+      } else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("<")) {
+        node = new DefaultMutableTreeNode("<");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("E");
+        parent.add(node);
+        error1 = rule_E(node);
+        flag++;
+        operator="<";
+        opr="12";
+      }
+      else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("==")) {
+        node = new DefaultMutableTreeNode("==");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("E");
+        parent.add(node);
+        error1 = rule_E(node);
+        flag++;
+        operator="==";
+        opr="15";
+      }
+      else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("!=")) {
+        node = new DefaultMutableTreeNode("!=");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("E");
+        parent.add(node);
+        error1 = rule_E(node);
+        flag++;
+        operator="!=";
+        opr="16";
+      }
+
+      if(flag==2)
+      {
+      	String x= sa.popStack();
+      	String y= sa.popStack();
+      	
+      	String res= sa.calculateCube(x, y, operator);
+      	SemanticAnalyzer.pushStack(res);
+      	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
+      	flag=1;
+      	
+      }
+
+    }
+    return error1;
+  }
+  
+  private static boolean rule_E(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    String operator=null;
+    String opr=null;
+    DefaultMutableTreeNode node;
+    node = new DefaultMutableTreeNode("A");
+    parent.add(node);
+    error1 = rule_A(node);
+    int flag=1;
+    while (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("+") || currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("-")) {
+      if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("+")) {
+        node = new DefaultMutableTreeNode("+");
+        operator="+";
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("A");
+        parent.add(node);
+        error1 = rule_A(node);
+        flag++;
+        opr="2";
+      } else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("-")) {
+        node = new DefaultMutableTreeNode("-");
+        parent.add(node);
+       operator="-";
+        currentToken++;
+        node = new DefaultMutableTreeNode("A");
+        parent.add(node);
+        error1 = rule_A(node);
+        flag++;
+        opr="3";
+      }
+
+      if(flag==2)
+      {
+      	String x= sa.popStack();
+      	String y= sa.popStack();
+      	
+      	String res= sa.calculateCube(x, y, operator);
+      	SemanticAnalyzer.pushStack(res);
+      	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
+      	flag=1;
+      	
+      }
+    }
+    return error1;
+  }
+
+  private static boolean rule_A(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    String operator=null;
+    String opr=null;
+    DefaultMutableTreeNode node = new DefaultMutableTreeNode("B");
+    parent.add(node);
+    error1 = rule_B(node);
+    int flag=1;
+    while (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("*") || currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("/")) {
+      if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("*")) {
+        node = new DefaultMutableTreeNode("*");
+        parent.add(node);
+        currentToken++;
+        node = new DefaultMutableTreeNode("B");
+        parent.add(node);
+        error1 = rule_B(node);
+        flag++;
+        operator="*";
+        opr="4";
+
+      } else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("/")) {
+        node = new DefaultMutableTreeNode("/");
+        parent.add(node);
+        node = new DefaultMutableTreeNode("B");
+        parent.add(node);
+        currentToken++;
+        error1 = rule_B(node);
+        flag++;
+        operator="/";
+        opr="5";
+      }
+      if(flag==2)
+      {
+      	String x= sa.popStack();
+      	String y= sa.popStack();
+      	
+      	String res= sa.calculateCube(x, y, operator);
+      	SemanticAnalyzer.pushStack(res);
+      	CodeGenerator.addInstruction("OPR", opr, "0");
+      	prgcounter++;
+      	flag=1;
+      	
+      }
+    }
+    return error1;
+  }
+
+  private static boolean rule_B(DefaultMutableTreeNode parent) {
+    boolean error1;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    int flag=0;
+    DefaultMutableTreeNode node;
+    if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("-")) {
+      node = new DefaultMutableTreeNode("-");
+      parent.add(node);
+      CodeGenerator.addInstruction("LIT","0", "0");
+      prgcounter++;
+      currentToken++;
+      flag=1;
+    }
+    node = new DefaultMutableTreeNode("C");
+    parent.add(node);
+    error1 = rule_C(node);
+    
+    if(flag==1){
+    String x= sa.popStack();
+    String y= sa.calculateCube(x, "-");
+    SemanticAnalyzer.pushStack(y);
+  	CodeGenerator.addInstruction("OPR","3", "0");
+  	prgcounter++;
+    
+    }
+    
+    return error1;
+  }
+
+  private static boolean rule_C(DefaultMutableTreeNode parent) {
+    boolean error1 = false;
+    SemanticAnalyzer sa=new SemanticAnalyzer();
+    DefaultMutableTreeNode node;
+    
+    if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("INTEGER")) {
+      node = new DefaultMutableTreeNode("integer" + "(" + tokens.get(currentToken).getWord() + ")");
+      parent.add(node);
+      SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
+      CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+      prgcounter++;
+      currentToken++;
+    } 
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("FLOAT")) {
+    node = new DefaultMutableTreeNode("float" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("INTEGER");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    } 
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("STRING")) {
+    node = new DefaultMutableTreeNode("String" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("CHARACTER")) {
+    node = new DefaultMutableTreeNode("character" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack(tokens.get(currentToken).getToken());
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("BINARY")) {
+    node = new DefaultMutableTreeNode("binary" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("INTEGER");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equalsIgnoreCase("true")) {
+    node = new DefaultMutableTreeNode("boolean" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("BOOLEAN");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equalsIgnoreCase("false")) {
+    node = new DefaultMutableTreeNode("boolean" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("BOOLEAN");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("OCTAL")) {
+    node = new DefaultMutableTreeNode("octal" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("INTEGER");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("HEXADECIMAL")) {
+    node = new DefaultMutableTreeNode("HEXADECIMAL" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+    SemanticAnalyzer.pushStack("INTEGER");
+    CodeGenerator.addInstruction("LIT",tokens.get(currentToken).getWord(), "0");
+    prgcounter++;
+    currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("IDENTIFIER")) {
+    node = new DefaultMutableTreeNode("identifier" + "(" + tokens.get(currentToken).getWord() + ")");
+    parent.add(node);
+
+		  if(!SemanticAnalyzer.getSymbolTable().isEmpty()){
+			  if(SemanticAnalyzer.getSymbolTable().containsKey(tokens.get(currentToken).getWord())){
+	
+				  SemanticAnalyzer.pushStack(SemanticAnalyzer.getSymbolTable().get(tokens.get(currentToken).getWord()).firstElement().getType());
+			  }
+			  else
+				  {
+				  	System.out.println("Variable "+tokens.get(currentToken).getWord()+" not defined");
+				  	SemanticAnalyzer.pushStack("ERROR");
+				  	SemanticAnalyzer.error(gui, 4,tokens.get(currentToken).getWord());
+				  }
+		  }
+		  else
+			  {
+			  	System.out.println("Accessing an empty symbol table");SemanticAnalyzer.pushStack("ERROR");
+			  	SemanticAnalyzer.error(gui, 4,tokens.get(currentToken).getWord());
+			}
+	
+		  CodeGenerator.addInstruction("LOD", tokens.get(currentToken).getWord(), "0");
+		  prgcounter++;
+     currentToken++;
+    }
+    
+    else if (currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")) {
+      node = new DefaultMutableTreeNode("(");
+      parent.add(node);
+      currentToken++;
+      //
+      node = new DefaultMutableTreeNode("expression");
+      parent.add(node);
+      error1 = rule_expression(node);
+      if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+      node = new DefaultMutableTreeNode(")");
+      parent.add(node);
+      currentToken++;
+      }
+      else
+      error(7);
+    }
+    
+    else {
+      error(9);
+      
+      }
+    
+    return false;
+  }
+  
+  public static int getLineNum()
+  {
+	  return tokens.get(currentToken).getLine();
+  }
+  
+  public static void error(int err) {
+  int k=0,n=0;
+  if(currentToken==0 || err==4)
+	  n = tokens.get(currentToken).getLine();
+  else
+  {
+	  n = tokens.get(currentToken).getLine();
+	  k = tokens.get(currentToken-1).getLine();
+	  if(k<n)
+		  n=k;
+	  //if(err==4)
+		//  n = tokens.get(currentToken).getLine();
+  }
+  switch (err) { 
+  case 1: gui.writeConsole("Line" + n + ": expected {"); break; 
+  case 2: gui.writeConsole("Line" + n + ": expected }"); break; 
+  case 3: gui.writeConsole("Line" + n + ": expected ;"); break; 
+  case 4: 
+  gui.writeConsole("Line" +n+": expected identifier or keyword"); 
+  break; 
+  case 5: 
+  gui.writeConsole("Line" +n+": expected ="); break; 
+  case 6: 
+  gui.writeConsole("Line" +n+": expected identifier"); break; 
+  case 7: 
+  gui.writeConsole("Line" +n+": expected )"  ); break; 
+  case 8: 
+  gui.writeConsole("Line" +n+": expected ("); break; 
+  case 9: 
+  gui.writeConsole("Line" +n+": expected value, identifier, ("); 
+  case 10:
+	  gui.writeConsole("Line" +n+": expected value");
+  case 11:
+	  gui.writeConsole("Line" +n+": expected integer, hexadecimal, octal or character as case argument");
+  break;
+    	 
+
+	  
+  } 
+} 
+
+}

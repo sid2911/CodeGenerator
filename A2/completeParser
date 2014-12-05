@@ -45,6 +45,7 @@ public class Parser {
     st=new ArrayList<String>();
     root = new DefaultMutableTreeNode("PROGRAM");
     CodeGenerator.clear(gui);
+    SemanticAnalyzer.getSymbolTable().clear();
     //
     rule_program(root);
     CodeGenerator.addInstruction("OPR", "0", "0");
@@ -541,7 +542,7 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 	  else
 	  {
 	  error(8);
-	  while(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER")  || tokens.get(currentToken).getToken().equals("FLOAT") || tokens.get(currentToken).getToken().equals("CHARACTER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL")  || tokens.get(currentToken).getToken().equals("IDENTIFIER") || tokens.get(currentToken).getWord().equals(")") ) )
+	  while(currentToken < tokens.size() && !tokens.get(currentToken).getToken().equals("IDENTIFIER"))  
 	  currentToken++;
 	  }
 	  
@@ -621,10 +622,11 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 		  currentToken++;
 		  }
 	  
+	  node= new DefaultMutableTreeNode("case");
+	  parent.add(node);
+	  
 	  do{
-		  node= new DefaultMutableTreeNode("case");
-		  parent.add(node);
-		  currentToken++;
+		  
 		  rule_CASES(node);
 		  
 	  }while(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("case"));
@@ -662,11 +664,29 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
   private static void rule_CASES(DefaultMutableTreeNode parent){
 	  
 	  
+	  
 	  DefaultMutableTreeNode node=null;
 	  int line=0;
 	  String str=null,str1=null,a=null,b=null;
+	  
+	  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("case")){
+		
+		  node= new DefaultMutableTreeNode("case");
+		  parent.add(node);
+		  currentToken++;
+		  
+	  }
+	  
+	  else{
+		  
+		  error(12);
+		  while(currentToken < tokens.size() && !(tokens.get(currentToken).getWord().equals(":") ))
+			  currentToken++;
+		  
+	 }
+		  
 	  	  
-	  if(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getToken().equals("OCTAL") || tokens.get(currentToken).getToken().equals("HEXADECIMAL") || tokens.get(currentToken).getToken().equals("CHARACTER"))){
+	  if(currentToken < tokens.size() && (tokens.get(currentToken).getToken().equals("INTEGER") || tokens.get(currentToken).getToken().equals("OCTAL")|| tokens.get(currentToken).getToken().equals("BINARY") || tokens.get(currentToken).getToken().equals("HEXADECIMAL"))){
 		  str= "case"+tokens.get(currentToken).getWord();
 		  CodeGenerator.addInstruction("LOD", s, "0");
 		  prgcounter++;
@@ -692,7 +712,7 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 	  currentToken++;
 	  }
 	  else{
-		  error(12);
+		  error(13);
 		  while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("{"))
 			  currentToken++;
 		  
@@ -716,9 +736,19 @@ private static boolean rule_PRINT(DefaultMutableTreeNode parent)
 
   private static void rule_DEFAULT(DefaultMutableTreeNode parent){
 	 
-	  DefaultMutableTreeNode node= new DefaultMutableTreeNode("default"+tokens.get(currentToken).getWord());
-	  parent.add(node);
-	  currentToken++;
+	  DefaultMutableTreeNode node=null;
+	  if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(":")){
+		  node=new DefaultMutableTreeNode("default"+tokens.get(currentToken).getWord());
+		  parent.add(node);
+		  currentToken++;
+		    
+	  }
+	  else{
+		  error(13);
+		  while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("{"))
+			  currentToken++;
+		  
+	  }
 	  
 	  rule_program(node);
 	  
@@ -1200,12 +1230,16 @@ private static boolean rule_expression(DefaultMutableTreeNode parent) {
   gui.writeConsole("Line" +n+": expected value, identifier, ("); 
   case 10:
 	  gui.writeConsole("Line" +n+": expected value");
+	  break;
   case 11:
-	  gui.writeConsole("Line" +n+": expected integer, hexadecimal, octal or character as case argument");
-  break;
-    	 
-
-	  
+	  gui.writeConsole("Line" +n+": expected integer, hexadecimal, octal or binary as argument");
+	  break;
+  case 12:
+	  gui.writeConsole("Line" +n+": expected keyword 'case'");
+	  break;
+  case 13:
+	  gui.writeConsole("Line" +n+": expected :");
+	  break; 
   } 
 } 
 
